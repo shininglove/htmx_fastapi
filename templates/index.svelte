@@ -6,17 +6,18 @@
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="stylesheet" href="/static/output.css" />
         <link rel="icon" href="/static/favicon.ico" type="image/x-icon" />
+        <link href="/static/video-js.css" rel="stylesheet" />
         <script src="/static/htmx.min.js"></script>
     </head>
     <body class="mx-auto container">
-        <div class="sticky top-0 bg-white p-2">
-            <p class="text-red-500 font-extrabold text-4xl">$homies</p>
+        <div class="bg-white p-2">
+            <p class="text-red-500 font-extrabold text-4xl">$title</p>
             <form onsubmit="event.preventDefault()">
                 <input
                     id="dir_search"
                     type="text"
                     name="search"
-                    class="border-2 border-orange-400 mt-2 w-1/3 p-2"
+                    class="border-4 border-orange-400 mt-2 w-1/3 p-2"
                     hx-post="/filesystem"
                     hx-trigger="load, click from:#desktop"
                     hx-target="#folder_files"

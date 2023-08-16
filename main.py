@@ -2,10 +2,10 @@ from contextlib import asynccontextmanager
 from os import getenv
 from pathlib import Path
 from typing import Annotated
-from fastapi import FastAPI, Form, HTTPException
+from fastapi import FastAPI, Form, HTTPException, Response
 from fastapi.responses import FileResponse, HTMLResponse
 from app.utilities import render_html
-from app.views import generate_files, generate_media_links
+from app.views import generate_files, generate_main_input, generate_media_links
 
 
 @asynccontextmanager
@@ -21,27 +21,17 @@ app = FastAPI(lifespan=lifespan)
 
 
 @app.post("/media_search", response_class=HTMLResponse)
-def change_input(dir_name: Annotated[str, Form()]):
+def change_input(dir_name: Annotated[str, Form()], response: Response):
     home = getenv("HOME", "/home")
     home = Path(home) / dir_name
-    return f"""
-    <input
-        id="dir_search"
-        type="text"
-        name="search"
-        class="border-2 border-orange-400 mt-2 w-1/3 p-2"
-        hx-post="/filesystem"
-        hx-trigger="load, click from:#desktop"
-        hx-target="#folder_files"
-        value="{home}"
-    />
-    """
+    response.headers["HX-Trigger-After-Settle"] = "refetch"
+    return generate_main_input(home)
 
 
 @app.get("/", response_class=HTMLResponse)
 async def index():
     home = getenv("HOME", "/home")
-    html = render_html("index.svelte", {"homies": "FileSystem", "home": home})
+    html = render_html("index.svelte", {"title": "FileSystem", "home": home})
     return HTMLResponse(content=html, status_code=200)
 
 

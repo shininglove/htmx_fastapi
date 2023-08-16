@@ -4,6 +4,21 @@ from string import Template
 import urllib.parse
 
 
+def generate_main_input(home: Path | str) -> str:
+    return f"""
+    <input
+        id="dir_search"
+        type="text"
+        name="search"
+        class="border-4 border-orange-400 mt-2 w-1/3 p-2"
+        hx-post="/filesystem"
+        hx-trigger="refetch from:body, click from:#desktop"
+        hx-target="#folder_files"
+        value="{home}"
+    />
+    """
+
+
 def generate_media_links(media: str) -> str:
     html = ""
     size = 400
@@ -34,6 +49,9 @@ def generate_files(directory: str, hidden: bool = False) -> str:
     # initialize or prepend with the ..
     subhtml = ""
     for item in dirs:
+        parent = item.parent
+        if os.name == "nt":
+            parent = str(parent).replace("\\", "/")
         subhtml += Template(
             """
             <div 
@@ -47,8 +65,8 @@ def generate_files(directory: str, hidden: bool = False) -> str:
                     📁$item_name
             </div>
         """
-        ).safe_substitute({"item_name": item.name, "parent": item.parent})
-    html += f"<div class='inline-flex gap-3'>{subhtml}</div>"
+        ).safe_substitute({"item_name": item.name, "parent": parent})
+    html += f"<div class='flex-wrap inline-flex gap-3'>{subhtml}</div>"
     media_html = ""
     for each in files:
         plain_filename = str(each).replace(home, "")
@@ -71,7 +89,9 @@ def media_create(filename: str, emoji: str) -> str:
              class='cursor-pointer'
              hx-post='/showcase' 
              hx-vals='{"media": "/static$filename"}' 
-             hx-target='#video_player' hx-trigger='click'>
+             hx-target='#video_player' hx-trigger='click'
+             hx-swap="innerHTML show:bottom"
+        >
              $emoji $normal
         </div>
     """
