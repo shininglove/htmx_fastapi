@@ -15,7 +15,7 @@ def generate_media_links(media: str) -> str:
     return html
 
 
-def generate_files(directory: str, hidden: bool =False) -> str:
+def generate_files(directory: str, hidden: bool = False) -> str:
     html = ""
     home = os.getenv("HOME", "/home")
     path = Path(directory)
@@ -31,33 +31,51 @@ def generate_files(directory: str, hidden: bool =False) -> str:
         for file in path.iterdir()
         if file.is_file() and file.name.startswith(".") == hidden
     ]
+    # initialize or prepend with the ..
     subhtml = ""
     for item in dirs:
-        subhtml += f'<div class="text-2xl cursor-pointer">📁{item.name}</div>'
+        subhtml += Template(
+            """
+            <div 
+                class="text-2xl cursor-pointer directory"
+                hx-post="/media_search"
+                hx-vals='{"dir_name": "$parent/$item_name"}' 
+                hx-trigger="click"
+                hx-target="#dir_search"
+                hx-swap="outerHTML"
+            >
+                    📁$item_name
+            </div>
+        """
+        ).safe_substitute({"item_name": item.name, "parent": item.parent})
     html += f"<div class='inline-flex gap-3'>{subhtml}</div>"
     media_html = ""
     for each in files:
         plain_filename = str(each).replace(home, "")
         filename = urllib.parse.quote(plain_filename)
-        size = 200
+        if os.name == "nt":
+            filename = plain_filename.replace("\\", "/")
         match each.suffix:
             case ".mp4" | ".mov":
-                media_html += video_create(filename, size)
+                media_html += media_create(filename, "📀")
             case ".jpg" | ".png" | ".jpeg" | ".webp" | ".gif":
-                media_html += image_create(filename, each.name)
+                media_html += media_create(filename, "📷")
     html += f"<div class='inline-flex flex-wrap gap-3'>{media_html}</div>"
     return html
 
 
-def video_create(filename: str, size: int) -> str:
-    video_link = "<video width='$size' height='$size' hx-post='/showcase' hx-vals='{\"media\": \"/static$filename\"}' hx-target='#video_player' hx-trigger='click'><source src='/static$filename'></source></video>"
-    video = Template(video_link).safe_substitute({"filename": filename, "size": size})
-    return video
-
-
-def image_create(filename: str, each_name: str) -> str:
-    img_link = "<img hx-post='/showcase' hx-vals='{\"media\": \"/static$filename\"}' hx-target='#video_player' hx-trigger='click' class='flex-row cursor-pointer w-20 h-20 border border-orange-400' src='/static$filename' alt='$each_name'/>"
-    img = Template(img_link).safe_substitute(
-        {"filename": filename, "each_name": each_name}
+def media_create(filename: str, emoji: str) -> str:
+    normal = urllib.parse.unquote(filename)
+    media_link = """
+        <div 
+             class='cursor-pointer'
+             hx-post='/showcase' 
+             hx-vals='{"media": "/static$filename"}' 
+             hx-target='#video_player' hx-trigger='click'>
+             $emoji $normal
+        </div>
+    """
+    media = Template(media_link).safe_substitute(
+        {"filename": filename, "normal": Path(normal).name, "emoji": emoji}
     )
-    return img
+    return media

@@ -20,6 +20,24 @@ async def lifespan(_: FastAPI):
 app = FastAPI(lifespan=lifespan)
 
 
+@app.post("/media_search", response_class=HTMLResponse)
+def change_input(dir_name: Annotated[str, Form()]):
+    home = getenv("HOME", "/home")
+    home = Path(home) / dir_name
+    return f"""
+    <input
+        id="dir_search"
+        type="text"
+        name="search"
+        class="border-2 border-orange-400 mt-2 w-1/3 p-2"
+        hx-post="/filesystem"
+        hx-trigger="load, click from:#desktop"
+        hx-target="#folder_files"
+        value="{home}"
+    />
+    """
+
+
 @app.get("/", response_class=HTMLResponse)
 async def index():
     home = getenv("HOME", "/home")

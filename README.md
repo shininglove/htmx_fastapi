@@ -1,6 +1,6 @@
 ##TODO##
-- Rename capabilities
+- Rename capabilities (big)
 - Move capabilities (big)
-- Folder navigation
+- Folder navigation (descent done)
 - iteratively mount the parents
-- Remove beginning slash from home
+- Remove beginning slash from home (don't need?)
