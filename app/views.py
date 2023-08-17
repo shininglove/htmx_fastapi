@@ -2,6 +2,7 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 from string import Template
+from typing import Literal
 import urllib.parse
 
 
@@ -63,13 +64,24 @@ def generate_media_links(media: str) -> str:
         case ".mp4" | ".mov":
             html += f'<video id="showcase" {hx_actions} controls width="{size}" height="{size}"><source src="{media}"></source></video>'
         case ".jpg" | ".png" | ".jpeg" | ".webp" | ".gif":
-            html += f'<img id="showcase" {hx_actions} class="w-48 h-48" src="{media}" />'
+            html += (
+                f'<img id="showcase" {hx_actions} class="w-48 h-48" src="{media}" />'
+            )
     return html
 
 
-def format_directory(dirs: list[Path], move: bool, original_path: Path) -> str:
+def format_directory(
+    dirs: list[Path],
+    move: bool,
+    original_path: Path,
+    sort_by: Literal["abc", "size"] | None = None,
+) -> str:
     emoji = "📁"
     subhtml = ""
+    if sort_by == "abc":
+        dirs = sorted(dirs, key=lambda x: x.name.lower())
+    if sort_by == "size":
+        dirs = sorted(dirs, key=lambda y: y.stat(follow_symlinks=True).st_size)
     for item in dirs:
         parent = item.parent
         if os.name == "nt":
@@ -139,15 +151,22 @@ def generate_dirs(path: Path) -> str:
         if dir.is_dir() and dir.name.startswith(".") == False
     ]
     move_mode = bool(os.getenv("MOVE_MODE", 0))
-    subhtml = format_directory(dirs, move=move_mode, original_path=path)
+    subhtml = format_directory(dirs, move=move_mode, original_path=path, sort_by="abc")
     html += f"<div id='folder_container' class='flex-wrap inline-flex gap-3 px-2'>{subhtml}</div>"
     return html
 
 
 def format_files(
-    files: list[Path], home: str, emoji: dict[str, str] = {"video": "📀", "photo": "📷"}
+    files: list[Path],
+    home: str,
+    emoji: dict[str, str] = {"video": "📀", "photo": "📷"},
+    sort_by: Literal["abc", "size"] | None = None,
 ) -> str:
     media_html = ""
+    if sort_by == "abc":
+        files = sorted(files, key=lambda x: x.name.lower())
+    if sort_by == "size":
+        files = sorted(files, key=lambda y: y.stat(follow_symlinks=True).st_size)
     for each in files:
         plain_filename = str(each).replace(home, "")
         filename = urllib.parse.quote(plain_filename)
@@ -168,7 +187,7 @@ def generate_files(path: Path, home: str) -> str:
         if file.is_file() and file.name.startswith(".") == False
     ]
     html = ""
-    media_html = format_files(files, home)
+    media_html = format_files(files, home, sort_by="size")
     html += f"<div id='folder_container' class='flex-wrap inline-flex gap-3 px-2'>{media_html}</div>"
     return html
 

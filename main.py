@@ -29,7 +29,7 @@ app = FastAPI(lifespan=lifespan)
 
 
 @app.get("/search_input", response_class=HTMLResponse)
-def gen_input():
+async def gen_input():
     options = InputOptions(
         placeholder="New Folder...",
         border_color="border-pink-500",
@@ -42,7 +42,7 @@ def gen_input():
 
 
 @app.get("/rename_input", response_class=HTMLResponse)
-def rename_input():
+async def rename_input():
     current_file = getenv("CURRENT_FILE")
     if current_file is None:
         current_file = ""
@@ -59,7 +59,7 @@ def rename_input():
 
 
 @app.post("/rename_directory", response_class=HTMLResponse)
-def rename_directory(rename_folder: Annotated[str, Form()], response: Response):
+async def rename_directory(rename_folder: Annotated[str, Form()], response: Response):
     home = getenv("HOME", "/home")
     current_file = getenv("CURRENT_FILE")
     if current_file is not None:
@@ -72,7 +72,7 @@ def rename_directory(rename_folder: Annotated[str, Form()], response: Response):
 
 
 @app.post("/new_directory", response_class=HTMLResponse)
-def new_directory(new_folder: Annotated[str, Form()], response: Response):
+async def new_directory(new_folder: Annotated[str, Form()], response: Response):
     filesystem = getenv("CURRENT_FILESYSTEM")
     if filesystem is not None:
         create_folder = Path(filesystem) / new_folder
@@ -82,7 +82,7 @@ def new_directory(new_folder: Annotated[str, Form()], response: Response):
 
 
 @app.post("/media_search", response_class=HTMLResponse)
-def change_input(dir_name: Annotated[str, Form()], response: Response):
+async def change_input(dir_name: Annotated[str, Form()], response: Response):
     home = getenv("HOME", "/home")
     home = Path(home) / dir_name
     response.headers["HX-Trigger-After-Settle"] = "refetch"
@@ -90,7 +90,7 @@ def change_input(dir_name: Annotated[str, Form()], response: Response):
 
 
 @app.post("/move_mode", response_class=HTMLResponse)
-def move_mode(response: Response):
+async def move_mode(response: Response):
     mode = getenv("MOVE_MODE")
     if mode is not None:
         environ.pop("MOVE_MODE")
@@ -101,7 +101,7 @@ def move_mode(response: Response):
 
 
 @app.post("/move_file", response_class=HTMLResponse)
-def move_file(filename: Annotated[str, Form()], response: Response):
+async def move_file(filename: Annotated[str, Form()], response: Response):
     home = getenv("HOME", "/tmp")
     home_location = Path(home)
     basefilename = filename.replace("/static/", "")
@@ -116,7 +116,7 @@ def move_file(filename: Annotated[str, Form()], response: Response):
 
 
 @app.post("/select_directory", response_class=HTMLResponse)
-def select_directory(destination: Annotated[str, Form()], response: Response):
+async def select_directory(destination: Annotated[str, Form()], response: Response):
     target = getenv("TARGET_MEDIA_DIR")
     if target is not None:
         environ.pop("TARGET_MEDIA_DIR")
@@ -138,7 +138,7 @@ async def index():
 
 
 @app.get("/static/{files:path}", response_class=HTMLResponse)
-def static(files: str):
+async def static(files: str):
     location = Path("static") / files
     if location.exists():
         return FileResponse(location)
@@ -146,14 +146,14 @@ def static(files: str):
 
 
 @app.post("/showcase", response_class=HTMLResponse)
-def data(media: Annotated[str, Form()]):
+async def data(media: Annotated[str, Form()]):
     environ["CURRENT_FILE"] = media
     html = generate_media_links(media)
     return HTMLResponse(content=html, status_code=200)
 
 
 @app.post("/filesystem", response_class=HTMLResponse)
-def filesystem(search: Annotated[str, Form()]):
+async def filesystem(search: Annotated[str, Form()]):
     # iteratively symlink path with parts
     home = getenv("HOME", "/home")
     if search == "":
