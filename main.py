@@ -1,11 +1,13 @@
 from contextlib import asynccontextmanager
-from os import getenv
+import shutil
+import urllib.parse
+from os import environ, getenv
 from pathlib import Path
 from typing import Annotated
 from fastapi import FastAPI, Form, HTTPException, Response
 from fastapi.responses import FileResponse, HTMLResponse
 from app.utilities import render_html
-from app.views import generate_files, generate_main_input, generate_media_links
+from app.views import generate_file_list, generate_main_input, generate_media_links
 
 
 @asynccontextmanager
@@ -28,8 +30,49 @@ def change_input(dir_name: Annotated[str, Form()], response: Response):
     return generate_main_input(home)
 
 
+@app.post("/move_mode", response_class=HTMLResponse)
+def move_mode(response: Response):
+    mode = getenv("MOVE_MODE")
+    if mode is not None:
+        environ.pop("MOVE_MODE")
+    if mode is None:
+        environ["MOVE_MODE"] = str(not mode)
+    response.headers["HX-Trigger-After-Settle"] = "refetch"
+    return ""
+
+
+@app.post("/move_file", response_class=HTMLResponse)
+def move_file(filename: Annotated[str, Form()], response: Response):
+    home = getenv("HOME", "/tmp")
+    home_location = Path(home)
+    basefilename = filename.replace("/static/", "")
+    basefilename = urllib.parse.unquote(basefilename)
+    true_location = home_location / basefilename
+    target = getenv("TARGET_MEDIA_DIR", "/tmp")
+    target_location = Path(true_location).parent / target 
+    if target_location.exists():
+        shutil.move(true_location, target_location)
+    response.headers["HX-Trigger-After-Settle"] = "refetch"
+    return ""
+
+
+@app.post("/select_directory", response_class=HTMLResponse)
+def select_directory(destination: Annotated[str, Form()], response: Response):
+    target = getenv("TARGET_MEDIA_DIR")
+    if target is not None:
+        environ.pop("TARGET_MEDIA_DIR")
+    if target is None:
+        environ["TARGET_MEDIA_DIR"] = destination
+    response.headers["HX-Trigger-After-Settle"] = "sendfile"
+    return ""
+
+
 @app.get("/", response_class=HTMLResponse)
 async def index():
+    if getenv("MOVE_MODE") is not None:
+        environ.pop("MOVE_MODE")
+    if getenv("TARGET_MEDIA_DIR") is not None:
+        environ.pop("TARGET_MEDIA_DIR")
     home = getenv("HOME", "/home")
     html = render_html("index.svelte", {"title": "FileSystem", "home": home})
     return HTMLResponse(content=html, status_code=200)
@@ -59,5 +102,5 @@ def filesystem(search: Annotated[str, Form()]):
     static_sym = Path(f"static/{sym_path}")
     if not static_sym.exists() and not static_sym.is_symlink():
         static_sym.symlink_to(Path(search))
-    html = generate_files(search)
+    html = generate_file_list(search)
     return HTMLResponse(content=html, status_code=200)

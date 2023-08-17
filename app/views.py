@@ -10,7 +10,7 @@ def generate_main_input(home: Path | str) -> str:
         id="dir_search"
         type="text"
         name="search"
-        class="border-4 border-orange-400 mt-2 w-1/3 p-2"
+        class="border-4 border-purple-500 mt-2 w-1/3 p-2"
         hx-post="/filesystem"
         hx-trigger="refetch from:body, click from:#desktop"
         hx-target="#folder_files"
@@ -22,51 +22,100 @@ def generate_main_input(home: Path | str) -> str:
 def generate_media_links(media: str) -> str:
     html = ""
     size = 400
+    hx_actions = ""
+    move_mode = os.getenv("MOVE_MODE")
+    if move_mode:
+        hx_actions = Template(
+            """hx-post="/move_file" hx-target="#video_player" hx-trigger="sendfile from:body" hx-vals='{"filename": "$media"}'"""
+        ).safe_substitute({"media": media})
     match Path(media).suffix:
         case ".mp4" | ".mov":
-            html += f'<video controls width="{size}" height="{size}"><source src="{media}"></source></video>'
+            html += f'<video {hx_actions} controls width="{size}" height="{size}"><source src="{media}"></source></video>'
         case ".jpg" | ".png" | ".jpeg" | ".webp" | ".gif":
-            html += f'<img class="w-48 h-48" src="{media}" />'
+            html += f'<img {hx_actions} class="w-48 h-48" src="{media}" />'
     return html
 
 
-def generate_files(directory: str, hidden: bool = False) -> str:
-    html = ""
-    home = os.getenv("HOME", "/home")
-    path = Path(directory)
-    if not path.exists():
-        return html
-    dirs = [
-        dir
-        for dir in path.iterdir()
-        if dir.is_dir() and dir.name.startswith(".") == hidden
-    ]
-    files = [
-        file
-        for file in path.iterdir()
-        if file.is_file() and file.name.startswith(".") == hidden
-    ]
-    # initialize or prepend with the ..
+def format_directory(dirs: list[Path], move: bool) -> str:
+    emoji = "📁"
     subhtml = ""
     for item in dirs:
         parent = item.parent
         if os.name == "nt":
             parent = str(parent).replace("\\", "/")
+        if move:
+            emoji = "↪️ "
+            subhtml += Template(
+                """
+                <div 
+                    class="text-2xl cursor-pointer"
+                    hx-post="/select_directory"
+                    hx-vals='{"destination": "$item_name"}' 
+                    hx-trigger="click"
+                    hx-swap="none"
+                >
+                        $emoji$item_name
+                </div>
+            """
+            ).safe_substitute(
+                {"item_name": item.name, "parent": parent, "emoji": emoji}
+            )
+        else:
+            subhtml += Template(
+                """
+                <div 
+                    class="text-2xl cursor-pointer"
+                    hx-post="/media_search"
+                    hx-vals='{"dir_name": "$parent/$item_name"}' 
+                    hx-trigger="click"
+                    hx-target="#dir_search"
+                    hx-swap="outerHTML"
+                >
+                        $emoji$item_name
+                </div>
+            """
+            ).safe_substitute(
+                {"item_name": item.name, "parent": parent, "emoji": emoji}
+            )
+    if not move:
+        parent = dirs[0].parent.parent
+        if os.name == "nt":
+            parent = str(parent).replace("\\", "/")
         subhtml += Template(
             """
-            <div 
-                class="text-2xl cursor-pointer directory"
-                hx-post="/media_search"
-                hx-vals='{"dir_name": "$parent/$item_name"}' 
-                hx-trigger="click"
-                hx-target="#dir_search"
-                hx-swap="outerHTML"
-            >
-                    📁$item_name
-            </div>
+           <div 
+               class="text-2xl cursor-pointer"
+               hx-post="/media_search"
+               hx-vals='{"dir_name": "$parent"}' 
+               hx-trigger="click"
+               hx-target="#dir_search"
+               hx-swap="outerHTML"
+           >
+                   $emoji$item_name
+           </div>
+
         """
-        ).safe_substitute({"item_name": item.name, "parent": parent})
-    html += f"<div class='flex-wrap inline-flex gap-3'>{subhtml}</div>"
+        ).safe_substitute({"item_name": "..", "parent": parent, "emoji": emoji})
+
+    return subhtml
+
+
+def generate_dirs(path: Path) -> str:
+    html = ""
+    dirs = [
+        dir
+        for dir in path.iterdir()
+        if dir.is_dir() and dir.name.startswith(".") == False
+    ]
+    move_mode = bool(os.getenv("MOVE_MODE", 0))
+    subhtml = format_directory(dirs, move=move_mode)
+    html += f"<div id='folder_container' class='flex-wrap inline-flex gap-3 px-2'>{subhtml}</div>"
+    return html
+
+
+def format_files(
+    files: list[Path], home: str, emoji: dict[str, str] = {"video": "📀", "photo": "📷"}
+) -> str:
     media_html = ""
     for each in files:
         plain_filename = str(each).replace(home, "")
@@ -75,10 +124,33 @@ def generate_files(directory: str, hidden: bool = False) -> str:
             filename = plain_filename.replace("\\", "/")
         match each.suffix:
             case ".mp4" | ".mov":
-                media_html += media_create(filename, "📀")
+                media_html += media_create(filename, emoji["video"])
             case ".jpg" | ".png" | ".jpeg" | ".webp" | ".gif":
-                media_html += media_create(filename, "📷")
-    html += f"<div class='inline-flex flex-wrap gap-3'>{media_html}</div>"
+                media_html += media_create(filename, emoji["photo"])
+    return media_html
+
+
+def generate_files(path: Path, home: str) -> str:
+    files = [
+        file
+        for file in path.iterdir()
+        if file.is_file() and file.name.startswith(".") == False
+    ]
+    html = ""
+    media_html = format_files(files, home)
+    html += f"<div id='folder_container' class='flex-wrap inline-flex gap-3 px-2'>{media_html}</div>"
+    return html
+
+
+def generate_file_list(directory: str) -> str:
+    html = ""
+    home = os.getenv("HOME", "/home")
+    path = Path(directory)
+    if not path.exists():
+        return html
+    # initialize or prepend with the ..
+    html += generate_dirs(path)
+    html += generate_files(path, home)
     return html
 
 
