@@ -49,7 +49,7 @@ def move_file(filename: Annotated[str, Form()], response: Response):
     basefilename = urllib.parse.unquote(basefilename)
     true_location = home_location / basefilename
     target = getenv("TARGET_MEDIA_DIR", "/tmp")
-    target_location = Path(true_location).parent / target 
+    target_location = Path(true_location).parent / target
     if target_location.exists():
         shutil.move(true_location, target_location)
     response.headers["HX-Trigger-After-Settle"] = "refetch"

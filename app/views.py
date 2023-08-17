@@ -36,7 +36,7 @@ def generate_media_links(media: str) -> str:
     return html
 
 
-def format_directory(dirs: list[Path], move: bool) -> str:
+def format_directory(dirs: list[Path], move: bool, original_path: Path) -> str:
     emoji = "📁"
     subhtml = ""
     for item in dirs:
@@ -78,7 +78,7 @@ def format_directory(dirs: list[Path], move: bool) -> str:
                 {"item_name": item.name, "parent": parent, "emoji": emoji}
             )
     if not move:
-        parent = dirs[0].parent.parent
+        parent = original_path.parent
         if os.name == "nt":
             parent = str(parent).replace("\\", "/")
         subhtml += Template(
@@ -108,7 +108,7 @@ def generate_dirs(path: Path) -> str:
         if dir.is_dir() and dir.name.startswith(".") == False
     ]
     move_mode = bool(os.getenv("MOVE_MODE", 0))
-    subhtml = format_directory(dirs, move=move_mode)
+    subhtml = format_directory(dirs, move=move_mode, original_path=path)
     html += f"<div id='folder_container' class='flex-wrap inline-flex gap-3 px-2'>{subhtml}</div>"
     return html
 
