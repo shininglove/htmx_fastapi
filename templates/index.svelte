@@ -26,7 +26,7 @@
                     value="$home"
                 />
             </form>
-            <section class="mt-2" id="">(⌐■_■)</section>
+            <section class="mt-2" id="new_folder">(⌐■_■)</section>
             <section class="mt-2" id="video_player">(づ ◕‿◕ )づ</section>
             <button
                 id="move_folders"
@@ -46,6 +46,7 @@
             <button
                 id="changemenu"
                 class="mt-3 p-3 rounded border border-red-500 bg-pink-500 font-extrabold"
+                hx-get="/search_input" hx-trigger="click once" hx-target="#new_folder"
             >
                 💁🏽
             </button>

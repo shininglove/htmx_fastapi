@@ -7,7 +7,13 @@ from typing import Annotated
 from fastapi import FastAPI, Form, HTTPException, Response
 from fastapi.responses import FileResponse, HTMLResponse
 from app.utilities import render_html
-from app.views import generate_file_list, generate_main_input, generate_media_links
+from app.views import (
+    InputOptions,
+    generate_file_list,
+    generate_main_input,
+    generate_media_links,
+    generate_plain_input,
+)
 
 
 @asynccontextmanager
@@ -20,6 +26,30 @@ async def lifespan(_: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan)
+
+
+@app.get("/search_input", response_class=HTMLResponse)
+def gen_input():
+    options = InputOptions(
+        color="pink",
+        color_strength=500,
+        method="post",
+        endpoint="new_directory",
+        target="this",
+        event="click from:#changemenu",
+        name="new_folder"
+    )
+    return generate_plain_input(options)
+
+@app.post("/new_directory", response_class=HTMLResponse)
+def new_directory(new_folder: Annotated[str, Form()], response: Response):
+    filesystem = getenv("CURRENT_FILESYSTEM")
+    if filesystem is not None:
+        create_folder = Path(filesystem) / new_folder
+        create_folder.mkdir(exist_ok=True)
+    response.headers["HX-Trigger-After-Settle"] = "refetch"
+    return ""
+
 
 
 @app.post("/media_search", response_class=HTMLResponse)
@@ -100,6 +130,7 @@ def filesystem(search: Annotated[str, Form()]):
         search = home
     sym_path = search.replace(home, "")
     static_sym = Path(f"static/{sym_path}")
+    environ["CURRENT_FILESYSTEM"] = search
     if not static_sym.exists() and not static_sym.is_symlink():
         static_sym.symlink_to(Path(search))
     html = generate_file_list(search)

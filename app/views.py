@@ -1,7 +1,33 @@
 import os
+from dataclasses import dataclass
 from pathlib import Path
 from string import Template
 import urllib.parse
+
+
+@dataclass
+class InputOptions:
+    method: str
+    endpoint: str
+    event: str
+    name: str
+    target: str
+    color: str
+    color_strength: int = 500
+
+
+def generate_plain_input(data: InputOptions) -> str:
+    return f"""
+    <input
+        id="{data.name}"
+        type="text"
+        name="{data.name}"
+        class="border-4 border-{data.color}-{data.color_strength} mt-2 w-1/3 p-2"
+        hx-{data.method}="/{data.endpoint}"
+        hx-trigger="{data.event}"
+        hx-target="{data.target}"
+    />
+    """
 
 
 def generate_main_input(home: Path | str) -> str:
