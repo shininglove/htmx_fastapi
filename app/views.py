@@ -11,10 +11,11 @@ class InputOptions:
     event: str
     name: str
     target: str
-    color: str
+    border_color: str
+    placeholder: str
+    value: str = ""
     method: str = "post"
     swap: str = "none"
-    color_strength: int = 500
 
 
 def generate_plain_input(data: InputOptions) -> str:
@@ -23,11 +24,13 @@ def generate_plain_input(data: InputOptions) -> str:
         id="{data.name}"
         type="text"
         name="{data.name}"
-        class="border-4 border-{data.color}-{data.color_strength} mt-2 w-1/3 p-2"
+        placeholder="{data.placeholder}"
+        class="border-4 {data.border_color} mt-2 w-1/3 p-2"
         hx-{data.method}="/{data.endpoint}"
         hx-trigger="{data.event}"
         hx-target="{data.target}"
         hx-swap="{data.swap}"
+        value="{data.value}"
     />
     """
 
@@ -58,9 +61,9 @@ def generate_media_links(media: str) -> str:
         ).safe_substitute({"media": media})
     match Path(media).suffix:
         case ".mp4" | ".mov":
-            html += f'<video {hx_actions} controls width="{size}" height="{size}"><source src="{media}"></source></video>'
+            html += f'<video id="showcase" {hx_actions} controls width="{size}" height="{size}"><source src="{media}"></source></video>'
         case ".jpg" | ".png" | ".jpeg" | ".webp" | ".gif":
-            html += f'<img {hx_actions} class="w-48 h-48" src="{media}" />'
+            html += f'<img id="showcase" {hx_actions} class="w-48 h-48" src="{media}" />'
     return html
 
 

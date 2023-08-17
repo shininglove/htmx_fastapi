@@ -31,13 +31,45 @@ app = FastAPI(lifespan=lifespan)
 @app.get("/search_input", response_class=HTMLResponse)
 def gen_input():
     options = InputOptions(
-        color="pink",
+        placeholder="New Folder...",
+        border_color="border-pink-500",
         endpoint="new_directory",
         target="this",
         event="click from:#changemenu",
-        name="new_folder"
+        name="new_folder",
     )
     return generate_plain_input(options)
+
+
+@app.get("/rename_input", response_class=HTMLResponse)
+def rename_input():
+    current_file = getenv("CURRENT_FILE")
+    if current_file is None:
+        current_file = ""
+    options = InputOptions(
+        placeholder="Rename Folder...",
+        border_color="border-green-500",
+        endpoint="rename_directory",
+        target="this",
+        event="click from:#rename",
+        name="rename_folder",
+        value=Path(current_file).suffix,
+    )
+    return generate_plain_input(options)
+
+
+@app.post("/rename_directory", response_class=HTMLResponse)
+def rename_directory(rename_folder: Annotated[str, Form()], response: Response):
+    home = getenv("HOME", "/home")
+    current_file = getenv("CURRENT_FILE")
+    if current_file is not None:
+        filename = current_file.replace("/static/", "")
+        file_location = Path(home) / Path(filename)
+        new_name = file_location.parent / rename_folder
+        file_location.rename(new_name)
+    response.headers["HX-Trigger-After-Settle"] = "refetch"
+    return ""
+
 
 @app.post("/new_directory", response_class=HTMLResponse)
 def new_directory(new_folder: Annotated[str, Form()], response: Response):
@@ -47,7 +79,6 @@ def new_directory(new_folder: Annotated[str, Form()], response: Response):
         create_folder.mkdir(exist_ok=True)
     response.headers["HX-Trigger-After-Settle"] = "refetch"
     return ""
-
 
 
 @app.post("/media_search", response_class=HTMLResponse)
@@ -116,6 +147,7 @@ def static(files: str):
 
 @app.post("/showcase", response_class=HTMLResponse)
 def data(media: Annotated[str, Form()]):
+    environ["CURRENT_FILE"] = media
     html = generate_media_links(media)
     return HTMLResponse(content=html, status_code=200)
 

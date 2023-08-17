@@ -26,8 +26,8 @@
                     value="$home"
                 />
             </form>
-            <section class="mt-2" id="new_folder">(⌐■_■)</section>
-            <section class="mt-2" id="video_player">(づ ◕‿◕ )づ</section>
+            <section class="mt-2" id="video_player">👀👀👀</section>
+            <section class="mt-2" id="new_folder">💋💋💋</section>
             <button
                 id="move_folders"
                 class="mt-3 p-3 rounded border border-purple-500 bg-purple-500 text-white font-extrabold"
@@ -44,12 +44,20 @@
                 Fetch Files
             </button>
             <button
+                id="rename"
+                class="mt-3 p-3 rounded border border-lime-500 bg-green-500 font-extrabold"
+                hx-get="/rename_input" hx-trigger="click once" hx-target="#new_folder"
+            >
+               ✍️
+            </button>
+            <button
                 id="changemenu"
                 class="mt-3 p-3 rounded border border-red-500 bg-pink-500 font-extrabold"
                 hx-get="/search_input" hx-trigger="click once" hx-target="#new_folder"
             >
-                💁🏽
+               💅 
             </button>
+
         </div>
         <div class="flex pb-2">
             <section class="mt-2 gap-4 inline-flex flex-wrap" id="folder_files">
