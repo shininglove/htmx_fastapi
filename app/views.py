@@ -7,12 +7,13 @@ import urllib.parse
 
 @dataclass
 class InputOptions:
-    method: str
     endpoint: str
     event: str
     name: str
     target: str
     color: str
+    method: str = "post"
+    swap: str = "none"
     color_strength: int = 500
 
 
@@ -26,6 +27,7 @@ def generate_plain_input(data: InputOptions) -> str:
         hx-{data.method}="/{data.endpoint}"
         hx-trigger="{data.event}"
         hx-target="{data.target}"
+        hx-swap="{data.swap}"
     />
     """
 

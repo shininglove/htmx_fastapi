@@ -32,8 +32,6 @@ app = FastAPI(lifespan=lifespan)
 def gen_input():
     options = InputOptions(
         color="pink",
-        color_strength=500,
-        method="post",
         endpoint="new_directory",
         target="this",
         event="click from:#changemenu",
