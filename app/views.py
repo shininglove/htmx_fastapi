@@ -74,7 +74,7 @@ def format_directory(
     dirs: list[Path],
     move: bool,
     original_path: Path,
-    sort_by: Literal["abc", "size"] | None = None,
+    sort_by: Literal["abc", "size", "time"] | None = None,
 ) -> str:
     emoji = "📁"
     subhtml = ""
@@ -82,6 +82,10 @@ def format_directory(
         dirs = sorted(dirs, key=lambda x: x.name.lower())
     if sort_by == "size":
         dirs = sorted(dirs, key=lambda y: y.stat(follow_symlinks=True).st_size)
+    if sort_by == "time":
+        dirs = sorted(
+            dirs, key=lambda y: y.stat(follow_symlinks=True).st_mtime, reverse=True
+        )
     for item in dirs:
         parent = item.parent
         if os.name == "nt":
@@ -151,7 +155,7 @@ def generate_dirs(path: Path) -> str:
         if dir.is_dir() and dir.name.startswith(".") == False
     ]
     move_mode = bool(os.getenv("MOVE_MODE", 0))
-    subhtml = format_directory(dirs, move=move_mode, original_path=path, sort_by="abc")
+    subhtml = format_directory(dirs, move=move_mode, original_path=path, sort_by="time")
     html += f"<div id='folder_container' class='flex-wrap inline-flex gap-3 px-2'>{subhtml}</div>"
     return html
 

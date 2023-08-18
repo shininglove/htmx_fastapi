@@ -15,14 +15,19 @@ from app.views import (
     generate_plain_input,
 )
 
-
-@asynccontextmanager
-async def lifespan(_: FastAPI):
+def cleanup():
     static = Path("static")
     for dir in static.iterdir():
         if dir.is_symlink():
             dir.unlink()
+
+
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    cleanup()
     yield
+    cleanup()
 
 
 app = FastAPI(lifespan=lifespan)
