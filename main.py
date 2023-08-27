@@ -6,7 +6,9 @@ from pathlib import Path
 from typing import Annotated
 from fastapi import FastAPI, Form, HTTPException, Response
 from fastapi.responses import FileResponse, HTMLResponse
+from sqlalchemy import select
 from app.utilities import render_html
+from app.db.models import session, DirectoryState
 from app.views import (
     InputOptions,
     generate_file_list,
@@ -48,6 +50,8 @@ async def gen_input():
 
 @app.get("/rename_input", response_class=HTMLResponse)
 async def rename_input():
+    # change to db calls instead or do nothing and 
+    # 404 on empty vals
     current_file = getenv("CURRENT_FILE")
     if current_file is None:
         current_file = ""
@@ -107,15 +111,16 @@ async def move_mode(response: Response):
 
 @app.post("/move_file", response_class=HTMLResponse)
 async def move_file(filename: Annotated[str, Form()], response: Response):
-    home = getenv("HOME", "/tmp")
+    home = getenv("HOME", "/home")
     home_location = Path(home)
     basefilename = filename.replace("/static/", "")
     basefilename = urllib.parse.unquote(basefilename)
     true_location = home_location / basefilename
-    target = getenv("TARGET_MEDIA_DIR", "/tmp")
+    target = getenv("TARGET_MEDIA_DIR", "/home")
     target_location = Path(true_location).parent / target
     if target_location.exists():
         shutil.move(true_location, target_location)
+        print(f"shutilmove({true_location}, {target_location})")
     response.headers["HX-Trigger-After-Settle"] = "refetch"
     return ""
 
@@ -152,7 +157,12 @@ async def static(files: str):
 
 @app.post("/showcase", response_class=HTMLResponse)
 async def data(media: Annotated[str, Form()]):
-    environ["CURRENT_FILE"] = media
+    directory_state = DirectoryState(name="CURRENT_FILE",path=media)
+    stmt = select(directory_state)
+    directory = session.scalars(stmt).first()
+    if directory is None:
+        session.add(directory)
+        session.commit()
     html = generate_media_links(media)
     return HTMLResponse(content=html, status_code=200)
 
@@ -160,12 +170,20 @@ async def data(media: Annotated[str, Form()]):
 @app.post("/filesystem", response_class=HTMLResponse)
 async def filesystem(search: Annotated[str, Form()]):
     # iteratively symlink path with parts
-    home = getenv("HOME", "/home")
-    if search == "":
+    home = getenv("HOME")
+    if home is None:
+        return ""
+    if search == "" and home is not None:
         search = home
     sym_path = search.replace(home, "")
     static_sym = Path(f"static/{sym_path}")
-    environ["CURRENT_FILESYSTEM"] = search
+    directory_state = DirectoryState(name="CURRENT_FILESYSTEM",path=search)
+    stmt = select(directory_state)
+    directory = session.scalars(stmt).first()
+    if directory is None:
+        session.add(directory)
+        session.commit()
+        directory = directory_state
     if not static_sym.exists() and not static_sym.is_symlink():
         static_sym.symlink_to(Path(search))
     html = generate_file_list(search)
